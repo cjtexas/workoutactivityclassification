@@ -59,22 +59,14 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 </div>
 
 
-<pre class="r"><code>library(caret)</code></pre>
-<pre><code>## Loading required package: lattice
-## Loading required package: ggplot2</code></pre>
-<pre class="r"><code>library(doParallel)</code></pre>
-<pre><code>## Loading required package: foreach
-## Loading required package: iterators
-## Loading required package: parallel</code></pre>
-<pre class="r"><code>set.seed(333)
-
-# set up parallel backend
+<pre class="r"><code>library(caret)
+library(doParallel)
+set.seed(333)</code></pre>
+<pre class="r"><code># set up parallel backend
 cl &lt;- makePSOCKcluster(8)
-clusterEvalQ(cl, library(foreach))</code></pre>
-<pre class="r"><code>registerDoParallel(cl)
-# stopCluster(cl)
-
-training &lt;- read.csv('training.csv', header=T)
+clusterEvalQ(cl, library(foreach))
+registerDoParallel(cl)</code></pre>
+<pre class="r"><code>training &lt;- read.csv('training.csv', header=T)
 testing &lt;- read.csv('testing.csv', header=T)
 
 # remove unwanted columns and format
@@ -107,9 +99,6 @@ start_time &lt;- proc.time()
 modelfit &lt;- train(classe ~ ., method=&quot;rf&quot;
                   , trControl = trainControl(method = &quot;oob&quot;)
                   , data=training)</code></pre>
-<pre><code>## Loading required package: randomForest
-## randomForest 4.6-10
-## Type rfNews() to see new features/changes/bug fixes.</code></pre>
 <pre class="r"><code>end_time &lt;- proc.time()
 end_time - start_time</code></pre>
 <pre><code>##    user  system elapsed 
@@ -117,7 +106,7 @@ end_time - start_time</code></pre>
 <pre class="r"><code># stop parallel cluster
 stopCluster(cl)
 
-# confusion matrix indicates out-of-sample model accuracy
+# confusion matrix estimates out-of-sample model accuracy
 conf1 &lt;- confusionMatrix(training$classe, predict(modelfit, training))
 conf1</code></pre>
 <pre><code>## Confusion Matrix and Statistics
