@@ -1,0 +1,64 @@
+---
+title: "Workout Activity Classification"
+author: "Caleb"
+output: html_document
+---
+
+```{r}
+library(caret)
+library(doParallel)
+set.seed(333)
+
+# set up parallel backend
+cl <- makePSOCKcluster(4)
+clusterEvalQ(cl, library(foreach))
+registerDoParallel(cl)
+
+training <- read.csv('training.csv', header=T)
+testing <- read.csv('testing.csv', header=T)
+# remove unwanted columns and format
+nacols <- unique(data.frame(which(is.na(training) == TRUE, arr.ind=TRUE, useNames = TRUE))$col)
+training <- training[,- c(1:7,nacols)]
+testing <- testing[,- c(1:7,nacols)]
+
+asNumeric <- function(x) as.numeric(as.character(x))
+factorsNumeric <- function(d) modifyList(d, lapply(d[, sapply(d, is.factor)], asNumeric))
+
+testing <- cbind(factorsNumeric(testing[,-86]), testing[,86])
+training <- cbind(factorsNumeric(training[,-86]), training[,86])
+
+# investigate relationships of predictor variables
+# looking for correlations greater or equal to .85
+cormat <-abs(cor(testing[,-86]))
+diag(cormat) <- 0
+corresults <- which(cormat >= 0.85, arr.ind = T)
+predictors <- unique(row.names(corresults))
+predictors <- which(colnames(training)%in%predictors)
+# subset training for plotting
+plotsample <- training[sample(1:nrow(training), 20, replace=FALSE), c(predictors,86)]
+featurePlot(x = plotsample[,-27], y = plotsample[,27], plot = 'pairs', colour = plotsample$classe, labels = FALSE)
+
+# final training set
+training <- training[,c(predictors,86)]; colnames(training)[27] <- 'classe'
+testing <- testing[,predictors]
+
+#train random forest model using out-of-bag cross-validation 
+start_time <- proc.time()
+modelfit <- train(classe ~ ., method="rf"
+                  , trControl = trainControl(method = "oob")
+                  , data=training)
+end_time <- proc.time()
+end_time - start_time
+
+# stop parallel cluster
+stopCluster(cl)
+
+# confusion matrix indicates out-of-sample model accuracy
+conf1 <- confusionMatrix(training$classe, predict(modelfit, training))
+conf1
+
+# plot confusion matrix
+conf1df <- as.data.frame(normalize2Reference(conf1$table))
+plot <- ggplot(conf1df) 
+plot + geom_tile(aes(x=Reference, y=Prediction, fill=Freq)) + scale_fill_gradient2()
+```
